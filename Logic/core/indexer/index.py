@@ -32,8 +32,8 @@ class Index:
         """
 
         current_index = {}
-        #         TODO
-
+        for doc in self.preprocessed_documents:
+            current_index[doc['id']] = doc
         return current_index
 
     def index_stars(self):
@@ -47,8 +47,20 @@ class Index:
             So the index type is: {term: {document_id: tf}}
         """
 
-        #         TODO
-        pass
+        current_index = {}
+
+        for doc in self.preprocessed_documents:
+            for star in doc['stars']:
+
+                if star not in current_index:
+                    current_index[star] = {}
+
+                if doc['id'] not in current_index[star]:
+                    current_index[star][doc['id']] = 0
+
+                current_index[star][doc['id']] += 1
+
+        return current_index
 
     def index_genres(self):
         """
@@ -61,8 +73,21 @@ class Index:
             So the index type is: {term: {document_id: tf}}
         """
 
-        #         TODO
-        pass
+        current_index = {}
+
+        for doc in self.preprocessed_documents:
+
+            for genre in doc['genres']:
+
+                if genre not in current_index:
+                    current_index[genre] = {}
+
+                if doc['id'] not in current_index[genre]:
+                    current_index[genre][doc['id']] = 0
+
+                current_index[genre][doc['id']] += 1
+
+        return current_index
 
     def index_summaries(self):
         """
@@ -76,7 +101,21 @@ class Index:
         """
 
         current_index = {}
-        #         TODO
+
+        for doc in self.preprocessed_documents:
+
+            for summary in doc['summaries']:
+
+                words = summary.split()
+
+                for word in words:
+                    if word not in current_index:
+                        current_index[word] = {}
+
+                    if doc['id'] not in current_index[word]:
+                        current_index[word][doc['id']] = 0
+
+                    current_index[word][doc['id']] += 1
 
         return current_index
 
@@ -98,8 +137,7 @@ class Index:
         """
 
         try:
-            #         TODO
-            pass
+            return list(self.index[index_type][word].keys())
         except:
             return []
 
@@ -113,8 +151,26 @@ class Index:
             Document to add to all the indexes
         """
 
-        #         TODO
-        pass
+        self.preprocessed_documents.append(document)
+        self.index[Indexes.DOCUMENTS.value][document['id']] = document
+
+        for star in document['stars']:
+            if star not in self.index[Indexes.STARS.value]:
+                self.index[Indexes.STARS.value][star] = {}
+            self.index[Indexes.STARS.value][star][document['id']] = self.index[Indexes.STARS.value][star].get(document['id'], 0) + 1
+
+        for genre in document['genres']:
+            if genre not in self.index[Indexes.GENRES.value]:
+                self.index[Indexes.GENRES.value][genre] = {}
+            self.index[Indexes.GENRES.value][genre][document['id']] = self.index[Indexes.GENRES.value][genre].get(document['id'], 0) + 1
+
+        for summary in document['summaries']:
+            words = summary.split()
+            for word in words:
+                if word not in self.index[Indexes.SUMMARIES.value]:
+                    self.index[Indexes.SUMMARIES.value][word] = {}
+                self.index[Indexes.SUMMARIES.value][word][document['id']] = self.index[Indexes.SUMMARIES.value][word].get(document['id'], 0) + 1
+
 
     def remove_document_from_index(self, document_id: str):
         """
@@ -125,9 +181,29 @@ class Index:
         document_id : str
             ID of the document to remove from all the indexes
         """
+        document = self.index[Indexes.DOCUMENTS.value].pop(document_id, None)
 
-        #         TODO
-        pass
+        if document:
+            for star in document['stars']:
+                if document_id in self.index[Indexes.STARS.value].get(star, {}):
+                    del self.index[Indexes.STARS.value][star][document_id]
+                    if not self.index[Indexes.STARS.value][star]:
+                        del self.index[Indexes.STARS.value][star]
+
+            for genre in document['genres']:
+                if document_id in self.index[Indexes.GENRES.value].get(genre, {}):
+                    del self.index[Indexes.GENRES.value][genre][document_id]
+                    if not self.index[Indexes.GENRES.value][genre]:
+                        del self.index[Indexes.GENRES.value][genre]
+
+            for summary in document['summaries']:
+                words = summary.split()
+                for word in words:
+                    if document_id in self.index[Indexes.SUMMARIES.value].get(word, {}):
+                        del self.index[Indexes.SUMMARIES.value][word][document_id]
+                        if not self.index[Indexes.SUMMARIES.value][word]:
+                            del self.index[Indexes.SUMMARIES.value][word]
+
 
     def check_add_remove_is_correct(self):
         """
@@ -201,8 +277,9 @@ class Index:
         if index_name not in self.index:
             raise ValueError('Invalid index name')
 
-        # TODO
-        pass
+        with open(os.path.join(path, f"{index_name}.json"), 'w') as f:
+            json.dump(self.index[index_name], f)
+
 
     def load_index(self, path: str):
         """
@@ -213,9 +290,9 @@ class Index:
         path : str
             Path to load the file
         """
-
-        #         TODO
-        pass
+        for index_name in self.index.keys():
+            with open(os.path.join(path, f"{index_name}.json"), 'r') as f:
+                self.index[index_name] = json.load(f)
 
     def check_if_index_loaded_correctly(self, index_type: str, loaded_index: dict):
         """
@@ -298,3 +375,104 @@ class Index:
             return False
 
 # TODO: Run the class with needed parameters, then run check methods and finally report the results of check methods
+
+if __name__ == "__main__":
+    # Create a dummy preprocessed_documents list
+    preprocessed_documents = [
+        {'id': '1', 'stars': ['tim', 'henry'], 'genres': ['drama'], 'summaries': ['This is a good movie.']},
+        {'id': '2', 'stars': ['tim'], 'genres': ['action'], 'summaries': ['A great action movie.']},
+        {'id': '3', 'stars': ['henry'], 'genres': ['drama', 'crime'], 'summaries': ['An excellent crime drama.']},
+        {'id': '4', 'stars': ['tim', 'henry', 'jane'], 'genres': ['comedy', 'romance'],
+         'summaries': ['A hilarious romantic comedy.', 'Funny and heartwarming.']},
+        {'id': '5', 'stars': ['bob', 'alice'], 'genres': ['sci-fi', 'adventure'],
+         'summaries': ['A thrilling sci-fi adventure.', 'Out of this world!']},
+        {'id': '6', 'stars': ['jane', 'bob'], 'genres': ['horror'],
+         'summaries': ['A terrifying horror movie.', 'Prepare to be scared!']},
+        {'id': '7', 'stars': ['alice'], 'genres': ['documentary'],
+         'summaries': ['An eye-opening documentary.', 'Informative and thought-provoking.']},
+        {'id': '8', 'stars': ['tim', 'jane', 'alice'], 'genres': ['drama', 'mystery'],
+         'summaries': ['A gripping mystery drama.', 'Keep you guessing until the end.']},
+        {'id': '9', 'stars': ['henry', 'bob'], 'genres': ['action', 'thriller'],
+         'summaries': ['An intense action thriller.', 'Edge-of-your-seat excitement.']},
+        {'id': '10', 'stars': ['tim', 'alice'], 'genres': ['fantasy', 'adventure'],
+         'summaries': ['An epic fantasy adventure.', 'Escape to a magical world.']},
+        {'id': '11', 'stars': ['jane', 'henry'], 'genres': ['drama', 'romance'],
+         'summaries': ['A heartwarming romantic drama.', 'Love conquers all.']},
+        {'id': '12', 'stars': ['bob'], 'genres': ['comedy'],
+         'summaries': ['A laugh-out-loud comedy.', 'Hilarious from start to finish.']},
+        {'id': '13', 'stars': ['tim', 'henry', 'jane', 'bob', 'alice'], 'genres': ['ensemble'],
+         'summaries': ['An ensemble cast at their best.', 'Star-studded and entertaining.']},
+        {'id': '14', 'stars': [], 'genres': ['experimental'],
+         'summaries': ['A unique and thought-provoking film.', 'Challenging but rewarding.']},
+        {'id': '15', 'stars': ['jane', 'alice'], 'genres': ['biography', 'drama'],
+         'summaries': ['An inspiring biographical drama.', 'A true story of courage and perseverance.']},
+        {'id': '16', 'stars': ['tim', 'henry', 'jane', 'bob', 'alice', 'charlie', 'eve', 'david'],
+         'genres': ['action', 'adventure', 'sci-fi'],
+         'summaries': ['An epic sci-fi action adventure with a star-studded cast.',
+                       'Prepare for mind-blowing special effects and non-stop thrills.']},
+        {'id': '17', 'stars': [], 'genres': ['silent'],
+         'summaries': ['A classic silent film that speaks volumes through its visuals.']},
+        {'id': '18', 'stars': ['tim', 'henry'], 'genres': ['western', 'drama'],
+         'summaries': ['A gritty western drama about the harsh realities of frontier life.',
+                       'Powerful performances and stunning cinematography.']},
+        {'id': '19', 'stars': ['jane', 'alice', 'eve'], 'genres': ['musical', 'comedy'],
+         'summaries': ['A delightful musical comedy with catchy tunes and side-splitting humor.',
+                       'You\'ll be tapping your feet and laughing out loud.']},
+        {'id': '20', 'stars': ['bob', 'david', 'charlie'], 'genres': ['war', 'historical'],
+         'summaries': ['An intense and realistic portrayal of the horrors of war.',
+                       'A sobering reminder of the sacrifices made by those who served.']},
+        {'id': '21', 'stars': ['tim', 'jane', 'eve'], 'genres': ['animation', 'family'],
+         'summaries': ['A heartwarming animated film for the whole family.',
+                       'Colorful characters and valuable life lessons.']},
+        {'id': '22', 'stars': ['henry', 'alice', 'charlie'], 'genres': ['sports', 'drama'],
+         'summaries': ['An inspiring sports drama about overcoming adversity and achieving greatness.',
+                       'Get ready to cheer for the underdogs.']},
+        {'id': '23', 'stars': ['bob', 'david'], 'genres': ['noir', 'mystery'],
+         'summaries': ['A gritty noir mystery with twists and turns that will keep you guessing.',
+                       'Atmospheric and suspenseful.']},
+        {'id': '24', 'stars': ['tim', 'jane', 'alice', 'eve', 'charlie'], 'genres': ['ensemble', 'comedy'],
+         'summaries': ['A hilarious ensemble comedy with a talented cast of comedic actors.',
+                       'Prepare for non-stop laughter and side-splitting humor.']},
+        {'id': '25', 'stars': ['henry', 'bob', 'david'], 'genres': ['political', 'thriller'],
+         'summaries': ['A gripping political thriller that exposes the dark underbelly of power and corruption.',
+                       'Edge-of-your-seat suspense and intrigue.']},
+        {'id': '26', 'stars': ['tim', 'jane', 'alice', 'eve', 'charlie', 'david'], 'genres': ['period', 'drama'],
+         'summaries': ['A lavish period drama that transports you to a bygone era.',
+                       'Stunning costumes, sets, and performances that bring history to life.']},
+        {'id': '27', 'stars': ['henry', 'bob'], 'genres': ['superhero', 'action'],
+         'summaries': ['A high-octane superhero action film with jaw-dropping special effects.',
+                       'Get ready for epic battles and larger-than-life heroes.']},
+        {'id': '28', 'stars': ['tim', 'jane', 'alice'], 'genres': ['romantic', 'comedy'],
+         'summaries': ['A charming romantic comedy that will warm your heart and make you laugh.',
+                       'A delightful exploration of love, friendship, and finding happiness.']},
+        {'id': '29', 'stars': ['henry', 'bob', 'david', 'charlie', 'eve'], 'genres': ['heist', 'crime'],
+         'summaries': ['A slick and suspenseful heist film with a star-studded cast.',
+                       'Get ready for twists, turns, and high-stakes action.']},
+        {'id': '30', 'stars': ['tim', 'jane', 'alice', 'eve'], 'genres': ['independent', 'drama'],
+         'summaries': ['An indie drama that explores the complexities of human relationships.',
+                       'Powerful performances and thought-provoking themes.']},
+    ]
+
+    # Initialize the Index class with preprocessed_documents
+    index = Index(preprocessed_documents)
+
+    # Run check methods and report results
+    index.check_add_remove_is_correct()
+
+    # Save index to files
+    index.store_index('./index_storage', Indexes.DOCUMENTS.value)
+    index.store_index('./index_storage', Indexes.STARS.value)
+    index.store_index('./index_storage', Indexes.GENRES.value)
+    index.store_index('./index_storage', Indexes.SUMMARIES.value)
+
+    # Load index from files
+    index.load_index('./index_storage')
+
+    # Check if indexes are loaded correctly
+    for index_type in [Indexes.DOCUMENTS.value, Indexes.STARS.value, Indexes.GENRES.value, Indexes.SUMMARIES.value]:
+        loaded_index = index.index[index_type]
+        print(f"Checking if {index_type} index is loaded correctly: ", index.check_if_index_loaded_correctly(index_type, loaded_index))
+
+    # Check if indexing is good
+    for index_type in [Indexes.DOCUMENTS.value, Indexes.STARS.value, Indexes.GENRES.value, Indexes.SUMMARIES.value]:
+        print(f"Checking if indexing is good for {index_type}: ", index.check_if_indexing_is_good(index_type, 'good'))

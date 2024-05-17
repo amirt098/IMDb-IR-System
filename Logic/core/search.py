@@ -116,8 +116,13 @@ class SearchEngine:
         final_scores : dict
             The final scores of the documents.
         """
-        # TODO
-        pass
+        final_scores = {}
+        for field, field_scores in scores.items():
+            for doc_id, score in field_scores.items():
+                if doc_id not in final_scores:
+                    final_scores[doc_id] = 0
+                final_scores[doc_id] += weights[field] * score
+        return final_scores
 
     def find_scores_with_unsafe_ranking(
         self, query, method, weights, max_results, scores
@@ -139,9 +144,15 @@ class SearchEngine:
             The scores of the documents.
         """
         for field in weights:
+            if weights[field] == 0:
+                continue
+            scorer = Scorer(self.tiered_index[field].index, len(self.metadata_index.index))
             for tier in ["first_tier", "second_tier", "third_tier"]:
-                # TODO
-                pass
+                tier_scores = scorer.compute_scores_with_vector_space_model(query, method)
+                for doc_id, score in tier_scores.items():
+                    if doc_id not in scores:
+                        scores[doc_id] = {}
+                    scores[doc_id][field] = score
 
     def find_scores_with_safe_ranking(self, query, method, weights, scores):
         """
@@ -160,8 +171,14 @@ class SearchEngine:
         """
 
         for field in weights:
-            # TODO
-            pass
+            if weights[field] == 0:
+                continue
+            scorer = Scorer(self.document_indexes[field].index, len(self.metadata_index.index))
+            field_scores = scorer.compute_scores_with_vector_space_model(query, method)
+            for doc_id, score in field_scores.items():
+                if doc_id not in scores:
+                    scores[doc_id] = {}
+                scores[doc_id][field] = score
 
     def find_scores_with_unigram_model(
         self, query, smoothing_method, weights, scores, alpha=0.5, lamda=0.5
@@ -185,8 +202,15 @@ class SearchEngine:
             The parameter used in some smoothing methods to balance between the document
             probability and the collection probability. Defaults to 0.5.
         """
-        # TODO
-        pass
+        for field in weights:
+            if weights[field] == 0:
+                continue
+            scorer = Scorer(self.document_indexes[field].index, len(self.metadata_index.index))
+            field_scores = scorer.compute_scores_with_unigram_model(query, smoothing_method, alpha=alpha, lamda=lamda)
+            for doc_id, score in field_scores.items():
+                if doc_id not in scores:
+                    scores[doc_id] = {}
+                scores[doc_id][field] = score
 
     def merge_scores(self, scores1, scores2):
         """
@@ -205,7 +229,13 @@ class SearchEngine:
             The merged dictionary of scores.
         """
 
-        # TODO
+        merged_scores = scores1.copy()
+        for doc_id, score in scores2.items():
+            if doc_id in merged_scores:
+                merged_scores[doc_id] += score
+            else:
+                merged_scores[doc_id] = score
+        return merged_scores
 
 
 if __name__ == "__main__":
