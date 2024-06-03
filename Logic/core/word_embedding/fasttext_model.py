@@ -1,5 +1,6 @@
 import fasttext
 import re
+import string
 
 from tqdm import tqdm
 from nltk.corpus import stopwords
@@ -10,7 +11,7 @@ from .fasttext_data_loader import FastTextDataLoader
 
 
 def preprocess_text(text, minimum_length=1, stopword_removal=True, stopwords_domain=[], lower_case=True,
-                       punctuation_removal=True):
+                    punctuation_removal=True):
     """
     preprocess text by removing stopwords, punctuations, and converting to lowercase, and also filter based on a min length
     for stopwords use nltk.corpus.stopwords.words('english')
@@ -31,7 +32,22 @@ def preprocess_text(text, minimum_length=1, stopword_removal=True, stopwords_dom
     punctuation_removal: bool
         whether to remove punctuations
     """
-    pass
+    if lower_case:
+        text = text.lower()
+
+    if punctuation_removal:
+        text = text.translate(str.maketrans('', '', string.punctuation))
+
+    tokens = word_tokenize(text)
+
+    if stopword_removal:
+        stop_words = set(stopwords.words('english')).union(set(stopwords_domain))
+        tokens = [word for word in tokens if word not in stop_words]
+
+    tokens = [word for word in tokens if len(word) >= minimum_length]
+
+    return ' '.join(tokens)
+
 
 class FastText:
     """
@@ -57,7 +73,6 @@ class FastText:
         self.method = method
         self.model = None
 
-
     def train(self, texts):
         """
         Trains the FastText model with the given texts.
@@ -67,7 +82,13 @@ class FastText:
         texts : list of str
             The texts to train the FastText model.
         """
-        pass
+        preprocessed_texts = [preprocess_text(text) for text in texts]
+
+        with open('fasttext_training_data.txt', 'w') as f:
+            for text in preprocessed_texts:
+                f.write(text + '\n')
+
+        self.model = fasttext.train_unsupervised('fasttext_training_data.txt', model=self.method)
 
     def get_query_embedding(self, query):
         """
@@ -87,7 +108,10 @@ class FastText:
         np.ndarray
             The embedding for the query.
         """
-        pass
+        if self.model is None:
+            raise ValueError("Model is not trained or loaded. Please train or load a model before using this method.")
+        preprocessed_query = preprocess_text(query)
+        return self.model.get_sentence_vector(preprocessed_query)
 
     def analogy(self, word1, word2, word3):
         """
@@ -101,21 +125,39 @@ class FastText:
         Returns:
             str: The word that completes the analogy.
         """
+        if self.model is None:
+            raise ValueError("Model is not trained or loaded. Please train or load a model before using this method.")
+
         # Obtain word embeddings for the words in the analogy
-        # TODO
+        vec1 = self.model.get_word_vector(word1)
+        vec2 = self.model.get_word_vector(word2)
+        vec3 = self.model.get_word_vector(word3)
 
         # Perform vector arithmetic
-        # TODO
+        analogy_vector = vec1 - vec2 + vec3
 
         # Create a dictionary mapping each word in the vocabulary to its corresponding vector
-        # TODO
+        words = self.model.get_words()
+        word_vectors = {word: self.model.get_word_vector(word) for word in words}
 
         # Exclude the input words from the possible results
-        # TODO
+        exclude_words = {word1, word2, word3}
 
         # Find the word whose vector is closest to the result vector
-        # TODO
-        pass
+        closest_word = None
+        min_distance = float('inf')
+
+        for word, vector in word_vectors.items():
+            if word in exclude_words:
+                continue
+
+            dist = distance.cosine(analogy_vector, vector)
+
+            if dist < min_distance:
+                min_distance = dist
+                closest_word = word
+
+        return closest_word
 
     def save_model(self, path='FastText_model.bin'):
         """
@@ -126,7 +168,9 @@ class FastText:
         path : str, optional
             The path to save the FastText model.
         """
-        pass
+        if self.model is None:
+            raise ValueError("Model is not trained or loaded. Please train or load a model before saving.")
+        self.model.save_model(path)
 
     def load_model(self, path="FastText_model.bin"):
         """
@@ -137,7 +181,7 @@ class FastText:
         path : str, optional
             The path to load the FastText model.
         """
-        pass
+        self.model = fasttext.load_model(path)
 
     def prepare(self, dataset, mode, save=False, path='FastText_model.bin'):
         """
@@ -157,16 +201,17 @@ class FastText:
         if save:
             self.save_model(path)
 
+
 if __name__ == "__main__":
-    ft_model = FastText(preprocessor=preprocess_text, method='skipgram')
+    ft_model = FastText(method='skipgram')
 
     path = './Phase_1/index/'
-    ft_data_loader = FastTextDataLoader()
+    ft_data_loader = FastTextDataLoader(path)
 
-    X = ft_data_loader.create_train_data(path)
+    X = ft_data_loader.create_train_data()
 
     ft_model.train(X)
-    ft_model.prepare(None, mode = "save")
+    ft_model.prepare(None, mode="save")
 
     print(10 * "*" + "Similarity" + 10 * "*")
     word = 'queen'
@@ -179,4 +224,5 @@ if __name__ == "__main__":
     word1 = "man"
     word2 = "king"
     word3 = "queen"
-    print(f"Similarity between {word1} and {word2} is like similarity between {word3} and {ft_model.analogy(word1, word2, word3)}")
+    print(
+        f"Similarity between {word1} and {word2} is like similarity between {word3} and {ft_model.analogy(word1, word2, word3)}")

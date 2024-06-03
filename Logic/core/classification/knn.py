@@ -28,7 +28,9 @@ class KnnClassifier(BasicClassifier):
         self
             Returns self as a classifier
         """
-        pass
+        self.X_train = x
+        self.y_train = y
+        return self
 
     def predict(self, x):
         """
@@ -42,7 +44,15 @@ class KnnClassifier(BasicClassifier):
             Return the predicted class for each doc
             with the highest probability (argmax)
         """
-        pass
+        y_pred = []
+
+        for xi in tqdm(x, desc="Predicting"):
+            distances = np.linalg.norm(self.X_train - xi, axis=1)
+            nearest_neighbors = np.argsort(distances)[:self.k]
+            nearest_labels = self.y_train[nearest_neighbors]
+            y_pred.append(np.bincount(nearest_labels).argmax())
+
+        return np.array(y_pred)
 
     def prediction_report(self, x, y):
         """
@@ -57,7 +67,9 @@ class KnnClassifier(BasicClassifier):
         str
             Return the classification report
         """
-        pass
+        y_pred = self.predict(x)
+        report = classification_report(y, y_pred)
+        return report
 
 
 # F1 Accuracy : 70%
@@ -65,4 +77,12 @@ if __name__ == '__main__':
     """
     Fit the model with the training data and predict the test data, then print the classification report
     """
-    pass
+    file_path = 'IMDB Dataset.csv'
+    data_loader = ReviewLoader(file_path)
+    X_train, y_train = data_loader.load_data()
+    X_test, y_test = data_loader.load_data()
+
+    knn_classifier = KnnClassifier(n_neighbors=5)
+    knn_classifier.fit(X_train, y_train)
+    report = knn_classifier.prediction_report(X_test, y_test)
+    print(report)

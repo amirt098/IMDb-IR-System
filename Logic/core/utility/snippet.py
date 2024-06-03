@@ -134,7 +134,7 @@ if __name__ == '__main__':
     snippet_extractor = Snippet(number_of_words_on_each_side=5)
 
     filtered_query = snippet_extractor.remove_stop_words_from_query("quick brown fox typing")
-    print(filtered_query)
+    print(filtered_query, 'filtered_query')
 
     doc = ("The  brown fox brown jumps over the lazy dog. This classic sentence has been used to "
            "demonstrate typing and font samples because it includes every letter of the alphabet. "

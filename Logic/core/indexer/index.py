@@ -2,7 +2,7 @@ import time
 import os
 import json
 import copy
-from .indexes_enum import Indexes
+from .indexes_enum import Indexes, Index_types
 
 
 class Index:
@@ -18,7 +18,19 @@ class Index:
             Indexes.STARS.value: self.index_stars(),
             Indexes.GENRES.value: self.index_genres(),
             Indexes.SUMMARIES.value: self.index_summaries(),
+            Index_types.DOCUMENT_LENGTH.value: self.index_document_lengths(),
+
         }
+
+    def index_document_lengths(self):
+        """
+        Index the documents based on their lengths.
+        """
+        current_index = {}
+        for doc in self.preprocessed_documents:
+            doc_length = sum(len(summary.split()) for summary in doc['summaries'])
+            current_index[doc['id']] = doc_length
+        return current_index
 
     def index_documents(self):
         """
@@ -50,6 +62,13 @@ class Index:
         current_index = {}
 
         for doc in self.preprocessed_documents:
+            # print(doc)
+            # print('***')
+            if not doc.get('stars'):
+                print('no stars found for')
+                print(doc.get('title'))
+                print(doc.get('id'))
+                continue
             for star in doc['stars']:
 
                 if star not in current_index:
@@ -76,7 +95,11 @@ class Index:
         current_index = {}
 
         for doc in self.preprocessed_documents:
-
+            if not doc.get('genres'):
+                print('no genres found for')
+                print(doc.get('title'))
+                print(doc.get('id'))
+                continue
             for genre in doc['genres']:
 
                 if genre not in current_index:
@@ -103,6 +126,12 @@ class Index:
         current_index = {}
 
         for doc in self.preprocessed_documents:
+
+            if not doc.get('summaries'):
+                print('no summaries found for')
+                print(doc.get('title'))
+                print(doc.get('id'))
+                continue
 
             for summary in doc['summaries']:
 
@@ -225,26 +254,26 @@ class Index:
             print('Add is incorrect, document')
             return
 
-        if (set(index_after_add[Indexes.STARS.value]['tim']).difference(set(index_before_add[Indexes.STARS.value]['tim']))
+        if (set(index_after_add[Indexes.STARS.value]['tim']).difference(set(index_before_add[Indexes.STARS.value].get('tim', [])))
                 != {dummy_document['id']}):
             print('Add is incorrect, tim')
             return
 
-        if (set(index_after_add[Indexes.STARS.value]['henry']).difference(set(index_before_add[Indexes.STARS.value]['henry']))
+        if (set(index_after_add[Indexes.STARS.value]['henry']).difference(set(index_before_add[Indexes.STARS.value].get('henry', [])))
                 != {dummy_document['id']}):
             print('Add is incorrect, henry')
             return
-        if (set(index_after_add[Indexes.GENRES.value]['drama']).difference(set(index_before_add[Indexes.GENRES.value]['drama']))
+        if (set(index_after_add[Indexes.GENRES.value]['drama']).difference(set(index_before_add[Indexes.GENRES.value].get('drama', [])))
                 != {dummy_document['id']}):
             print('Add is incorrect, drama')
             return
 
-        if (set(index_after_add[Indexes.GENRES.value]['crime']).difference(set(index_before_add[Indexes.GENRES.value]['crime']))
+        if (set(index_after_add[Indexes.GENRES.value]['crime']).difference(set(index_before_add[Indexes.GENRES.value].get('crime', [])))
                 != {dummy_document['id']}):
             print('Add is incorrect, crime')
             return
 
-        if (set(index_after_add[Indexes.SUMMARIES.value]['good']).difference(set(index_before_add[Indexes.SUMMARIES.value]['good']))
+        if (set(index_after_add[Indexes.SUMMARIES.value]['good']).difference(set(index_before_add[Indexes.SUMMARIES.value].get('good', [])))
                 != {dummy_document['id']}):
             print('Add is incorrect, good')
             return
@@ -376,90 +405,106 @@ class Index:
 
 # TODO: Run the class with needed parameters, then run check methods and finally report the results of check methods
 
-if __name__ == "__main__":
-    # Create a dummy preprocessed_documents list
-    preprocessed_documents = [
-        {'id': '1', 'stars': ['tim', 'henry'], 'genres': ['drama'], 'summaries': ['This is a good movie.']},
-        {'id': '2', 'stars': ['tim'], 'genres': ['action'], 'summaries': ['A great action movie.']},
-        {'id': '3', 'stars': ['henry'], 'genres': ['drama', 'crime'], 'summaries': ['An excellent crime drama.']},
-        {'id': '4', 'stars': ['tim', 'henry', 'jane'], 'genres': ['comedy', 'romance'],
-         'summaries': ['A hilarious romantic comedy.', 'Funny and heartwarming.']},
-        {'id': '5', 'stars': ['bob', 'alice'], 'genres': ['sci-fi', 'adventure'],
-         'summaries': ['A thrilling sci-fi adventure.', 'Out of this world!']},
-        {'id': '6', 'stars': ['jane', 'bob'], 'genres': ['horror'],
-         'summaries': ['A terrifying horror movie.', 'Prepare to be scared!']},
-        {'id': '7', 'stars': ['alice'], 'genres': ['documentary'],
-         'summaries': ['An eye-opening documentary.', 'Informative and thought-provoking.']},
-        {'id': '8', 'stars': ['tim', 'jane', 'alice'], 'genres': ['drama', 'mystery'],
-         'summaries': ['A gripping mystery drama.', 'Keep you guessing until the end.']},
-        {'id': '9', 'stars': ['henry', 'bob'], 'genres': ['action', 'thriller'],
-         'summaries': ['An intense action thriller.', 'Edge-of-your-seat excitement.']},
-        {'id': '10', 'stars': ['tim', 'alice'], 'genres': ['fantasy', 'adventure'],
-         'summaries': ['An epic fantasy adventure.', 'Escape to a magical world.']},
-        {'id': '11', 'stars': ['jane', 'henry'], 'genres': ['drama', 'romance'],
-         'summaries': ['A heartwarming romantic drama.', 'Love conquers all.']},
-        {'id': '12', 'stars': ['bob'], 'genres': ['comedy'],
-         'summaries': ['A laugh-out-loud comedy.', 'Hilarious from start to finish.']},
-        {'id': '13', 'stars': ['tim', 'henry', 'jane', 'bob', 'alice'], 'genres': ['ensemble'],
-         'summaries': ['An ensemble cast at their best.', 'Star-studded and entertaining.']},
-        {'id': '14', 'stars': [], 'genres': ['experimental'],
-         'summaries': ['A unique and thought-provoking film.', 'Challenging but rewarding.']},
-        {'id': '15', 'stars': ['jane', 'alice'], 'genres': ['biography', 'drama'],
-         'summaries': ['An inspiring biographical drama.', 'A true story of courage and perseverance.']},
-        {'id': '16', 'stars': ['tim', 'henry', 'jane', 'bob', 'alice', 'charlie', 'eve', 'david'],
-         'genres': ['action', 'adventure', 'sci-fi'],
-         'summaries': ['An epic sci-fi action adventure with a star-studded cast.',
-                       'Prepare for mind-blowing special effects and non-stop thrills.']},
-        {'id': '17', 'stars': [], 'genres': ['silent'],
-         'summaries': ['A classic silent film that speaks volumes through its visuals.']},
-        {'id': '18', 'stars': ['tim', 'henry'], 'genres': ['western', 'drama'],
-         'summaries': ['A gritty western drama about the harsh realities of frontier life.',
-                       'Powerful performances and stunning cinematography.']},
-        {'id': '19', 'stars': ['jane', 'alice', 'eve'], 'genres': ['musical', 'comedy'],
-         'summaries': ['A delightful musical comedy with catchy tunes and side-splitting humor.',
-                       'You\'ll be tapping your feet and laughing out loud.']},
-        {'id': '20', 'stars': ['bob', 'david', 'charlie'], 'genres': ['war', 'historical'],
-         'summaries': ['An intense and realistic portrayal of the horrors of war.',
-                       'A sobering reminder of the sacrifices made by those who served.']},
-        {'id': '21', 'stars': ['tim', 'jane', 'eve'], 'genres': ['animation', 'family'],
-         'summaries': ['A heartwarming animated film for the whole family.',
-                       'Colorful characters and valuable life lessons.']},
-        {'id': '22', 'stars': ['henry', 'alice', 'charlie'], 'genres': ['sports', 'drama'],
-         'summaries': ['An inspiring sports drama about overcoming adversity and achieving greatness.',
-                       'Get ready to cheer for the underdogs.']},
-        {'id': '23', 'stars': ['bob', 'david'], 'genres': ['noir', 'mystery'],
-         'summaries': ['A gritty noir mystery with twists and turns that will keep you guessing.',
-                       'Atmospheric and suspenseful.']},
-        {'id': '24', 'stars': ['tim', 'jane', 'alice', 'eve', 'charlie'], 'genres': ['ensemble', 'comedy'],
-         'summaries': ['A hilarious ensemble comedy with a talented cast of comedic actors.',
-                       'Prepare for non-stop laughter and side-splitting humor.']},
-        {'id': '25', 'stars': ['henry', 'bob', 'david'], 'genres': ['political', 'thriller'],
-         'summaries': ['A gripping political thriller that exposes the dark underbelly of power and corruption.',
-                       'Edge-of-your-seat suspense and intrigue.']},
-        {'id': '26', 'stars': ['tim', 'jane', 'alice', 'eve', 'charlie', 'david'], 'genres': ['period', 'drama'],
-         'summaries': ['A lavish period drama that transports you to a bygone era.',
-                       'Stunning costumes, sets, and performances that bring history to life.']},
-        {'id': '27', 'stars': ['henry', 'bob'], 'genres': ['superhero', 'action'],
-         'summaries': ['A high-octane superhero action film with jaw-dropping special effects.',
-                       'Get ready for epic battles and larger-than-life heroes.']},
-        {'id': '28', 'stars': ['tim', 'jane', 'alice'], 'genres': ['romantic', 'comedy'],
-         'summaries': ['A charming romantic comedy that will warm your heart and make you laugh.',
-                       'A delightful exploration of love, friendship, and finding happiness.']},
-        {'id': '29', 'stars': ['henry', 'bob', 'david', 'charlie', 'eve'], 'genres': ['heist', 'crime'],
-         'summaries': ['A slick and suspenseful heist film with a star-studded cast.',
-                       'Get ready for twists, turns, and high-stakes action.']},
-        {'id': '30', 'stars': ['tim', 'jane', 'alice', 'eve'], 'genres': ['independent', 'drama'],
-         'summaries': ['An indie drama that explores the complexities of human relationships.',
-                       'Powerful performances and thought-provoking themes.']},
-    ]
 
-    # Initialize the Index class with preprocessed_documents
+if __name__ == '__main__':
+    with open('IMDB_crawled.json', 'r') as file:
+        preprocessed_documents = json.load(file)
+
+    # for movie in preprocessed_documents:
+    #     movie_title = movie['title']
+    #     movie_summary = movie['first_page_summary']
+    #     # Print the desired value
+    #     print(f"Title: {movie_title}")
+    #     print(f"Summary: {movie_summary}")
+    #     print(f"stars: {movie['stars']}")
+    #
+    #     print("-" * 20)
+
+    # preprocessed_documents = [
+    #     {'id': '1', 'stars': ['tim1', 'henry'], 'genres': ['drama'], 'summaries': ['This is a good movie.']},
+    #     {'id': '2', 'stars': ['tim1'], 'genres': ['action'], 'summaries': ['A great action movie.']},
+    #     {'id': '3', 'stars': ['henry'], 'genres': ['drama', 'crime'], 'summaries': ['An excellent crime drama.']},
+    #     {'id': '4', 'stars': ['tim1', 'henry', 'jane'], 'genres': ['comedy', 'romance'],
+    #      'summaries': ['A hilarious romantic comedy.', 'Funny and heartwarming.']},
+    #     {'id': '5', 'stars': ['bob', 'alice'], 'genres': ['sci-fi', 'adventure'],
+    #      'summaries': ['A thrilling sci-fi adventure.', 'Out of this world!']},
+    #     {'id': '6', 'stars': ['jane', 'bob'], 'genres': ['horror'],
+    #      'summaries': ['A terrifying horror movie.', 'Prepare to be scared!']},
+    #     {'id': '7', 'stars': ['alice'], 'genres': ['documentary'],
+    #      'summaries': ['An eye-opening documentary.', 'Informative and thought-provoking.']},
+    #     {'id': '8', 'stars': ['tim1', 'jane', 'alice'], 'genres': ['drama', 'mystery'],
+    #      'summaries': ['A gripping mystery drama.', 'Keep you guessing until the end.']},
+    #     {'id': '9', 'stars': ['henry', 'bob'], 'genres': ['action', 'thriller'],
+    #      'summaries': ['An intense action thriller.', 'Edge-of-your-seat excitement.']},
+    #     {'id': '10', 'stars': ['tim1', 'alice'], 'genres': ['fantasy', 'adventure'],
+    #      'summaries': ['An epic fantasy adventure.', 'Escape to a magical world.']},
+    #     {'id': '11', 'stars': ['jane', 'henry'], 'genres': ['drama', 'romance'],
+    #      'summaries': ['A heartwarming romantic drama.', 'Love conquers all.']},
+    #     {'id': '12', 'stars': ['bob'], 'genres': ['comedy'],
+    #      'summaries': ['A laugh-out-loud comedy.', 'Hilarious from start to finish.']},
+    #     {'id': '13', 'stars': ['tim1', 'henry', 'jane', 'bob', 'alice'], 'genres': ['ensemble'],
+    #      'summaries': ['An ensemble cast at their best.', 'Star-studded and entertaining.']},
+    #     {'id': '14', 'stars': [], 'genres': ['experimental'],
+    #      'summaries': ['A unique and thought-provoking film.', 'Challenging but rewarding.']},
+    #     {'id': '15', 'stars': ['jane', 'alice'], 'genres': ['biography', 'drama'],
+    #      'summaries': ['An inspiring biographical drama.', 'A true story of courage and perseverance.']},
+    #     {'id': '16', 'stars': ['tim1', 'henry', 'jane', 'bob', 'alice', 'charlie', 'eve', 'david'],
+    #      'genres': ['action', 'adventure', 'sci-fi'],
+    #      'summaries': ['An epic sci-fi action adventure with a star-studded cast.',
+    #                    'Prepare for mind-blowing special effects and non-stop thrills.']},
+    #     {'id': '17', 'stars': [], 'genres': ['silent'],
+    #      'summaries': ['A classic silent film that speaks volumes through its visuals.']},
+    #     {'id': '18', 'stars': ['tim1', 'henry'], 'genres': ['western', 'drama'],
+    #      'summaries': ['A gritty western drama about the harsh realities of frontier life.',
+    #                    'Powerful performances and stunning cinematography.']},
+    #     {'id': '19', 'stars': ['jane', 'alice', 'eve'], 'genres': ['musical', 'comedy'],
+    #      'summaries': ['A delightful musical comedy with catchy tunes and side-splitting humor.',
+    #                    'You\'ll be tapping your feet and laughing out loud.']},
+    #     {'id': '20', 'stars': ['bob', 'david', 'charlie'], 'genres': ['war', 'historical'],
+    #      'summaries': ['An intense and realistic portrayal of the horrors of war.',
+    #                    'A sobering reminder of the sacrifices made by those who served.']},
+    #     {'id': '21', 'stars': ['tim1', 'jane', 'eve'], 'genres': ['animation', 'family'],
+    #      'summaries': ['A heartwarming animated film for the whole family.',
+    #                    'Colorful characters and valuable life lessons.']},
+    #     {'id': '22', 'stars': ['henry', 'alice', 'charlie'], 'genres': ['sports', 'drama'],
+    #      'summaries': ['An inspiring sports drama about overcoming adversity and achieving greatness.',
+    #                    'Get ready to cheer for the underdogs.']},
+    #     {'id': '23', 'stars': ['bob', 'david'], 'genres': ['noir', 'mystery'],
+    #      'summaries': ['A gritty noir mystery with twists and turns that will keep you guessing.',
+    #                    'Atmospheric and suspenseful.']},
+    #     {'id': '24', 'stars': ['tim1', 'jane', 'alice', 'eve', 'charlie'], 'genres': ['ensemble', 'comedy'],
+    #      'summaries': ['A hilarious ensemble comedy with a talented cast of comedic actors.',
+    #                    'Prepare for non-stop laughter and side-splitting humor.']},
+    #     {'id': '25', 'stars': ['henry', 'bob', 'david'], 'genres': ['political', 'thriller'],
+    #      'summaries': ['A gripping political thriller that exposes the dark underbelly of power and corruption.',
+    #                    'Edge-of-your-seat suspense and intrigue.']},
+    #     {'id': '26', 'stars': ['tim1', 'jane', 'alice', 'eve', 'charlie', 'david'], 'genres': ['period', 'drama'],
+    #      'summaries': ['A lavish period drama that transports you to a bygone era.',
+    #                    'Stunning costumes, sets, and performances that bring history to life.']},
+    #     {'id': '27', 'stars': ['henry', 'bob'], 'genres': ['superhero', 'action'],
+    #      'summaries': ['A high-octane superhero action film with jaw-dropping special effects.',
+    #                    'Get ready for epic battles and larger-than-life heroes.']},
+    #     {'id': '28', 'stars': ['tim1', 'jane', 'alice'], 'genres': ['romantic', 'comedy'],
+    #      'summaries': ['A charming romantic comedy that will warm your heart and make you laugh.',
+    #                    'A delightful exploration of love, friendship, and finding happiness.']},
+    #     {'id': '29', 'stars': ['henry', 'bob', 'david', 'charlie', 'eve'], 'genres': ['heist', 'crime'],
+    #      'summaries': ['A slick and suspenseful heist film with a star-studded cast.',
+    #                    'Get ready for twists, turns, and high-stakes action.']},
+    #     {'id': '30', 'stars': ['tim1', 'jane', 'alice', 'eve'], 'genres': ['independent', 'drama'],
+    #      'summaries': ['An indie drama that explores the complexities of human relationships.',
+    #                    'Powerful performances and thought-provoking themes.']},
+    # ]
+
     index = Index(preprocessed_documents)
 
-    # Run check methods and report results
+    index_path = "index/"
+
+    # Store the indexes in JSON files
+    for index_type in Indexes:
+        index.store_index(index_path, index_type.value)
+
     index.check_add_remove_is_correct()
 
-    # Save index to files
     index.store_index('./index_storage', Indexes.DOCUMENTS.value)
     index.store_index('./index_storage', Indexes.STARS.value)
     index.store_index('./index_storage', Indexes.GENRES.value)

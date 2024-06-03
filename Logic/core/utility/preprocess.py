@@ -16,7 +16,7 @@ class Preprocessor:
         # TODO
         self.documents = documents
 
-        path = 'stopwords.txt'
+        path = '../Logic/core/utility/stopwords.txt'
         with open(path, 'r') as file:
             stopwords = file.read().splitlines()
 

@@ -77,9 +77,6 @@ class SpellCorrection:
         word_counter : dict
             A dictionary from words to their TFs.
         """
-        all_shingled_words = dict()
-        word_counter = dict()
-
         # TODO: Create shingled words dictionary and word counter dictionary here.
 
         all_shingled_words = {}
@@ -119,7 +116,7 @@ class SpellCorrection:
                 candidates.append((candidate_word, score))
 
         candidates.sort(key=lambda x: x[1], reverse=True)
-        print(candidates)
+        print(candidates, 'candidates')
         top5_candidates = candidates[:5]
 
         top5_candidates = sorted(top5_candidates, key=lambda x: x[1], reverse=True)
@@ -155,7 +152,7 @@ class SpellCorrection:
             else:
                 corrected_word = word
             corrected_query.append(corrected_word)
-        print(corrected_query)
+        print(corrected_query, 'corrected_query')
         final_result = " ".join(corrected_query)
 
         return final_result

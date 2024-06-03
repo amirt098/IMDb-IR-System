@@ -1,5 +1,7 @@
+from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+import wandb
 
 
 class DimensionReduction:

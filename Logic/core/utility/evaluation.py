@@ -1,5 +1,7 @@
 
 from typing import List
+import wandb
+
 
 class Evaluation:
 
@@ -24,10 +26,19 @@ class Evaluation:
         """
         precision = 0.0
 
-        # TODO: Calculate precision here
-        
+        for act, pred in zip(actual, predicted):
+            if len(pred) == 0:
+                precision += 0.0
+                continue
+
+            relevant_retrieved = set(act).intersection(set(pred))
+            precision += len(relevant_retrieved) / len(pred)
+
+        precision = precision / len(actual)
+
         return precision
-    
+        
+
     def calculate_recall(self, actual: List[List[str]], predicted: List[List[str]]) -> float:
         """
         Calculates the recall of the predicted results
@@ -46,8 +57,15 @@ class Evaluation:
         """
         recall = 0.0
 
-        # TODO: Calculate recall here
+        for act, pred in zip(actual, predicted):
+            if len(act) == 0:
+                recall += 0.0
+                continue
 
+            relevant_retrieved = set(act).intersection(set(pred))
+            recall += len(relevant_retrieved) / len(act)
+
+        recall = recall / len(actual)
         return recall
     
     def calculate_F1(self, actual: List[List[str]], predicted: List[List[str]]) -> float:
@@ -68,7 +86,12 @@ class Evaluation:
         """
         f1 = 0.0
 
-        # TODO: Calculate F1 here
+        precision = self.calculate_precision(actual, predicted)
+        recall = self.calculate_recall(actual, predicted)
+
+        if precision + recall == 0:
+            return f1
+        f1 = 2 * (precision * recall) / (precision + recall)
 
         return f1
     
@@ -90,7 +113,20 @@ class Evaluation:
         """
         AP = 0.0
 
-        # TODO: Calculate AP here
+        for act, pred in zip(actual, predicted):
+            if not act:
+                continue
+
+            score = 0.0
+            num_relevant = 0
+
+            for i, p in enumerate(pred):
+                if p in act:
+                    num_relevant += 1
+                    score += num_relevant / (i + 1)
+
+            AP += score / len(act)
+        AP =  AP / len(actual)
 
         return AP
     
@@ -112,10 +148,25 @@ class Evaluation:
         """
         MAP = 0.0
 
-        # TODO: Calculate MAP here
+        def average_precision(act, pred):
+            if not act:
+                return 0.0
+            score = 0.0
+            num_relevant = 0
+            for i, p in enumerate(pred):
+                if p in act:
+                    num_relevant += 1
+                    score += num_relevant / (i + 1)
+            return score / len(act)
+
+        total_ap = 0.0
+        for act, pred in zip(actual, predicted):
+            total_ap += average_precision(act, pred)
+
+        MAP = total_ap / len(actual)
 
         return MAP
-    
+
     def cacluate_DCG(self, actual: List[List[str]], predicted: List[List[str]]) -> float:
         """
         Calculates the Normalized Discounted Cumulative Gain (NDCG) of the predicted results
@@ -134,10 +185,13 @@ class Evaluation:
         """
         DCG = 0.0
 
-        # TODO: Calculate DCG here
+
+        for i, p in enumerate(predicted):
+            if p in actual:
+                DCG += 1 / (i + 1)
 
         return DCG
-    
+
     def cacluate_NDCG(self, actual: List[List[str]], predicted: List[List[str]]) -> float:
         """
         Calculates the Normalized Discounted Cumulative Gain (NDCG) of the predicted results
@@ -156,7 +210,14 @@ class Evaluation:
         """
         NDCG = 0.0
 
-        # TODO: Calculate NDCG here
+        for act, pred in zip(actual, predicted):
+            dcg = self.cacluate_DCG(act, pred)
+            ideal_dcg = self.cacluate_DCG(act, act)
+            if ideal_dcg == 0:
+                NDCG += 0.0
+            else:
+                NDCG += dcg / ideal_dcg
+        NDCG = NDCG / len(actual)
 
         return NDCG
     
@@ -179,6 +240,9 @@ class Evaluation:
         RR = 0.0
 
         # TODO: Calculate MRR here
+        for i, p in enumerate(predicted):
+            if p in actual:
+                RR = 1 / (i + 1)
 
         return RR
     
@@ -200,7 +264,9 @@ class Evaluation:
         """
         MRR = 0.0
 
-        # TODO: Calculate MRR here
+        for act, pred in zip(actual, predicted):
+            MRR += self.cacluate_RR(act, pred)
+        MRR = MRR / len(actual)
 
         return MRR
     
@@ -233,7 +299,15 @@ class Evaluation:
         """
         print(f"name = {self.name}")
 
-        #TODO: Print the evaluation metrics
+        print(f"precision: {precision:.4f}")
+        print(f"recall: {recall:.4f}")
+        print(f"F1 score: {f1:.4f}")
+        print(f"average precision - AP: {ap:.4f}")
+        print(f"MAP: {map:.4f}")
+        print(f"DCG - Discounted Cumulative Gain: {dcg:.4f}")
+        print(f"Normalized Discounted Cumulative Gain - NDCG: {ndcg:.4f}")
+        print(f"Reciprocal Rank - RR: {rr:.4f}")
+        print(f"Mean Reciprocal Rank - MRR: {mrr:.4f}")
       
 
     def log_evaluation(self, precision, recall, f1, ap, map, dcg, ndcg, rr, mrr):
@@ -263,8 +337,18 @@ class Evaluation:
             
         """
         
-        #TODO: Log the evaluation metrics using Wandb
 
+        wandb.log({
+            "Precision": precision,
+            "Recall": recall,
+            "F1 Score": f1,
+            "Average Precision (AP)": ap,
+            "Mean Average Precision (MAP)": map,
+            "Discounted Cumulative Gain (DCG)": dcg,
+            "Normalized Discounted Cumulative Gain (NDCG)": ndcg,
+            "Reciprocal Rank (RR)": rr,
+            "Mean Reciprocal Rank (MRR)": mrr
+        })
 
     def calculate_evaluation(self, actual: List[List[str]], predicted: List[List[str]]):
         """
@@ -294,4 +378,21 @@ class Evaluation:
         self.log_evaluation(precision, recall, f1, ap, map_score, dcg, ndcg, rr, mrr)
 
 
-
+#
+# if __name__ == "__main__":
+#     actual = [
+#         ["doc1", "doc2", "doc3"],
+#         ["doc1", "doc4", "doc5"],
+#         ["doc2", "doc3"]
+#     ]
+#
+#     predicted = [
+#         ["doc1", "doc4", "doc3"],
+#         ["doc1", "doc2", "doc3"],
+#         ["doc3", "doc2"]
+#     ]
+#     # wandb.init(project="evaluation-metrics")
+#
+#     evaluator = Evaluation(name="TestEvaluation")
+#     evaluator.calculate_evaluation(actual, predicted)
+#

@@ -3,12 +3,21 @@ from .core.search import SearchEngine
 from .core.utility.spell_correction import SpellCorrection
 from .core.utility.snippet import Snippet
 from .core.indexer.indexes_enum import Indexes, Index_types
+
 import json
 
-movies_dataset = None  # TODO: load your movies dataset (from the json file you saved your indexes in), here
+# movies_dataset = None  # TODO: load your movies dataset (from the json file you saved your indexes in), here
 # You can refer to `get_movie_by_id` to see how this is used.
-# search_engine = SearchEngine()
 
+with open('IMDB_crawled.json', 'r') as file:
+    movies_dataset = json.load(file)
+
+all_documents = None
+
+with open('../Logic/core/indexer/index/documents.json', 'r') as file:
+    all_documents = json.load(file)
+
+search_engine = SearchEngine()
 
 def correct_text(text: str, all_documents: List[str]) -> str:
     """
@@ -26,8 +35,8 @@ def correct_text(text: str, all_documents: List[str]) -> str:
         The corrected form of the given text
     """
     # TODO: You can add any preprocessing steps here, if needed!
-    # spell_correction_obj = SpellCorrection(all_documents)
-    # text = spell_correction_obj.spell_check(text)
+    spell_correction_obj = SpellCorrection(all_documents)
+    text = spell_correction_obj.spell_check(text)
     return text
 
 
@@ -36,7 +45,7 @@ def search(
     max_result_count: int,
     method: str = "ltn-lnn",
     weights: list = [0.3, 0.3, 0.4],
-    should_print=False,
+    should_print=True,
     preferred_genre: str = None,
 ):
     """
@@ -67,12 +76,35 @@ def search(
     list
     Retrieved documents with snippet
     """
-    # weights = ...  # TODO
-    # return search_engine.search(
-    #     query, method, weights, max_results=max_result_count, safe_ranking=True
-    # )
-    return None
+    weights_dict = {
+        Indexes.STARS: weights[0],
+        Indexes.GENRES: weights[1],
+        Indexes.SUMMARIES: weights[2],
+    }
 
+    # Perform the search using the SearchEngine instance
+    search_engine = SearchEngine()
+    results = search_engine.search(
+        query,
+        method,
+        weights_dict,
+        max_results=max_result_count if max_result_count != -1 else None,
+        safe_ranking=True,
+    )
+
+    if should_print:
+        print("Search Results:", results)
+
+    snippet_extractor = Snippet(number_of_words_on_each_side=5)
+    snippets = []
+    print('results', results)
+    for doc_id, score in results:
+        metadata = search_engine.metadata_index.index[doc_id]
+        doc_text = metadata.get('summaries', '')
+        snippet, not_exist_words = snippet_extractor.find_snippet(doc_text, query)
+        snippets.append((doc_id, score, snippet))
+
+    return snippets
 
 def get_movie_by_id(id: str, movies_dataset: List[Dict[str, str]]) -> Dict[str, str]:
     """
@@ -91,23 +123,25 @@ def get_movie_by_id(id: str, movies_dataset: List[Dict[str, str]]) -> Dict[str, 
     dict
         The movie with the given id
     """
-    # result = movies_dataset.get(
-    #     id,
-    #     {
-    #         "Title": "This is movie's title",
-    #         "Summary": "This is a summary",
-    #         "URL": "https://www.imdb.com/title/tt0111161/",
-    #         "Cast": ["Morgan Freeman", "Tim Robbins"],
-    #         "Genres": ["Drama", "Crime"],
-    #         "Image_URL": "https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg",
-    #     },
-    # )
+    result = movies_dataset.get(
+        id,
+        {
+            "Title": "This is movie's title",
+            "Summary": "This is a summary",
+            "URL": "https://www.imdb.com/title/tt0111161/",
+            "Cast": ["Morgan Freeman", "Tim Robbins"],
+            "Genres": ["Drama", "Crime"],
+            "Image_URL": "https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg",
+        },
+    )
 
-    # result["Image_URL"] = (
-    #     "https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg"  # a default picture for selected movies
-    # )
-    # result["URL"] = (
-    #     f"https://www.imdb.com/title/{result['id']}"  # The url pattern of IMDb movies
-    # )
-    # return result
-    return None
+    result["Image_URL"] = (
+        "https://m.media-amazon.com/images/M/MV5BNDE3ODcxYzMtY2YzZC00NmNlLWJiNDMtZDViZWM2MzIxZDYwXkEyXkFqcGdeQXVyNjAwNDUxODI@._V1_.jpg"  # a default picture for selected movies
+    )
+    result["URL"] = (
+        f"https://www.imdb.com/title/{result['id']}"  # The url pattern of IMDb movies
+    )
+    return result
+
+
+

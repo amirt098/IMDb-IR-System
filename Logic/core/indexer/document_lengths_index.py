@@ -2,8 +2,9 @@ import json
 from .indexes_enum import Indexes,Index_types
 from .index_reader import Index_reader
 
+
 class DocumentLengthsIndex:
-    def __init__(self,path='index/'):
+    def __init__(self, path='index/'):
         """
         Initializes the DocumentLengthsIndex class.
 
@@ -40,7 +41,14 @@ class DocumentLengthsIndex:
             the document's length in that field (where).
         """
 
-        # TODO:
+        document_lengths = {}
+        for doc_id, document in self.documents_index.items():
+            field_content = document.get(where)
+            if field_content is None:
+                document_lengths[doc_id] = 0
+            else:
+                document_lengths[doc_id] = len(field_content)
+        return document_lengths
     
     def store_document_lengths_index(self, path , index_name):
         """
@@ -53,7 +61,7 @@ class DocumentLengthsIndex:
         index_name : Indexes
             The name of the index to store.
         """
-        path = path + index_name.value + '_' + Index_types.DOCUMENT_LENGTH.value + '_index.json'
+        path = path + index_name.value + '_' + Index_types.DOCUMENT_LENGTH.value + '.json'
         with open(path, 'w') as file:
             json.dump(self.document_length_index[index_name], file, indent=4)
     

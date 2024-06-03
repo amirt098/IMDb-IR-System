@@ -10,7 +10,7 @@ class SearchEngine:
         Initializes the search engine.
 
         """
-        path = "/index"
+        path = "../Logic/core/indexer/index"
         self.document_indexes = {
             Indexes.STARS: Index_reader(path, Indexes.STARS),
             Indexes.GENRES: Index_reader(path, Indexes.GENRES),
@@ -83,19 +83,19 @@ class SearchEngine:
 
         scores = {}
         if method == "unigram":
-            self.find_scores_with_unigram_model(
+            scores = self.find_scores_with_unigram_model(
                 query, smoothing_method, weights, scores, alpha, lamda
             )
         elif safe_ranking:
-            self.find_scores_with_safe_ranking(query, method, weights, scores)
+            scores = self.find_scores_with_safe_ranking(query, method, weights, scores)
         else:
-            self.find_scores_with_unsafe_ranking(
+            scores = self.find_scores_with_unsafe_ranking(
                 query, method, weights, max_results, scores
             )
 
         final_scores = {}
 
-        self.aggregate_scores(weights, scores, final_scores)
+        final_scores = self.aggregate_scores(weights, scores, final_scores)
 
         result = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
         if max_results is not None:
@@ -116,12 +116,21 @@ class SearchEngine:
         final_scores : dict
             The final scores of the documents.
         """
-        final_scores = {}
+
+
+        # print("Weights:", weights)
+        # print("Scores:", scores)
+
         for field, field_scores in scores.items():
             for doc_id, score in field_scores.items():
                 if doc_id not in final_scores:
                     final_scores[doc_id] = 0
-                final_scores[doc_id] += weights[field] * score
+                if field in weights:
+                    final_scores[doc_id] += weights[field] * score
+                else:
+                    pass
+                    # print(f"Warning: field '{field}' not found in weights.")
+
         return final_scores
 
     def find_scores_with_unsafe_ranking(
@@ -146,13 +155,30 @@ class SearchEngine:
         for field in weights:
             if weights[field] == 0:
                 continue
-            scorer = Scorer(self.tiered_index[field].index, len(self.metadata_index.index))
+            tiered_index = self.tiered_index[field]
             for tier in ["first_tier", "second_tier", "third_tier"]:
+                if tier not in tiered_index:
+                    continue
+                scorer = Scorer(tiered_index[tier], len(self.metadata_index.index))
                 tier_scores = scorer.compute_scores_with_vector_space_model(query, method)
                 for doc_id, score in tier_scores.items():
                     if doc_id not in scores:
                         scores[doc_id] = {}
-                    scores[doc_id][field] = score
+                    if field not in scores[doc_id]:
+                        scores[doc_id][field] = 0
+                    scores[doc_id][field] += score * weights[field]
+
+        flattened_scores = []
+        for doc_id, field_scores in scores.items():
+            total_score = sum(field_scores.values())
+            flattened_scores.append((doc_id, total_score))
+
+        flattened_scores.sort(key=lambda x: x[1], reverse=True)
+        top_results = flattened_scores[:max_results]
+
+        top_scores = {doc_id: score for doc_id, score in top_results}
+
+        return top_scores
 
     def find_scores_with_safe_ranking(self, query, method, weights, scores):
         """
@@ -179,6 +205,7 @@ class SearchEngine:
                 if doc_id not in scores:
                     scores[doc_id] = {}
                 scores[doc_id][field] = score
+        return scores
 
     def find_scores_with_unigram_model(
         self, query, smoothing_method, weights, scores, alpha=0.5, lamda=0.5
@@ -211,6 +238,7 @@ class SearchEngine:
                 if doc_id not in scores:
                     scores[doc_id] = {}
                 scores[doc_id][field] = score
+        return scores
 
     def merge_scores(self, scores1, scores2):
         """

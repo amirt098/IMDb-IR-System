@@ -61,7 +61,16 @@ class Tiered_index:
         first_tier = {}
         second_tier = {}
         third_tier = {}
-        #TODO
+
+        for key, postings in current_index.items():
+            posting_count = sum(postings.values())  # Sum of counts in the postings list
+            if posting_count > first_tier_threshold:
+                first_tier[key] = postings
+            elif posting_count > second_tier_threshold:
+                second_tier[key] = postings
+            else:
+                third_tier[key] = postings
+
         return {
             "first_tier": first_tier,
             "second_tier": second_tier,
@@ -72,7 +81,7 @@ class Tiered_index:
         """
         Stores the tiered index to a file.
         """
-        path = path + index_name.value + "_" + Index_types.TIERED.value + "_index.json"
+        path = path + index_name.value + "_" + Index_types.TIERED.value + ".json"
         with open(path, "w") as file:
             json.dump(self.tiered_index[index_name], file, indent=4)
 

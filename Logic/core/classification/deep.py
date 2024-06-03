@@ -87,6 +87,34 @@ class DeepModelClassifier(BasicClassifier):
         -------
         self
         """
+
+        train_dataset = ReviewDataSet(x, y)
+        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+
+
+        best_f1 = 0.0
+        for epoch in range(self.num_epochs):
+            self.model.train()
+            epoch_loss = 0
+            for xb, yb in tqdm(train_loader):
+                xb, yb = xb.to(self.device), yb.to(self.device)
+                self.optimizer.zero_grad()
+                out = self.model(xb)
+                loss = self.criterion(out, yb)
+                loss.backward()
+                self.optimizer.step()
+                epoch_loss += loss.item()
+
+            print(f"Epoch {epoch + 1}/{self.num_epochs}, Loss: {epoch_loss / len(train_loader)}")
+
+            if self.test_loader is not None:
+                eval_loss, _, _, f1_macro = self._eval_epoch(self.test_loader, self.model)
+                print(f"Validation Loss: {eval_loss}, F1 Macro: {f1_macro}")
+                if f1_macro > best_f1:
+                    best_f1 = f1_macro
+                    self.best_model = self.model.state_dict()
+
+        self.model.load_state_dict(self.best_model)
         return self
 
     def predict(self, x):
@@ -101,7 +129,17 @@ class DeepModelClassifier(BasicClassifier):
         predicted_labels: list
             The predicted labels
         """
-        pass
+        test_dataset = ReviewDataSet(x, np.zeros(len(x)))  # Dummy labels
+        test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
+        self.model.eval()
+        predictions = []
+        with torch.no_grad():
+            for xb, _ in tqdm(test_loader):
+                xb = xb.to(self.device)
+                out = self.model(xb)
+                preds = torch.argmax(out, dim=1).cpu().numpy()
+                predictions.extend(preds)
+        return predictions
 
     def _eval_epoch(self, dataloader: torch.utils.data.DataLoader, model):
         """
@@ -120,7 +158,21 @@ class DeepModelClassifier(BasicClassifier):
         f1_score_macro: float
             The f1 score on the given dataloader
         """
-        pass
+        model.eval()
+        eval_loss = 0
+        predicted_labels = []
+        true_labels = []
+        with torch.no_grad():
+            for xb, yb in dataloader:
+                xb, yb = xb.to(self.device), yb.to(self.device)
+                out = model(xb)
+                loss = self.criterion(out, yb)
+                eval_loss += loss.item()
+                preds = torch.argmax(out, dim=1).cpu().numpy()
+                predicted_labels.extend(preds)
+                true_labels.extend(yb.cpu().numpy())
+        f1_macro = f1_score(true_labels, predicted_labels, average='macro')
+        return eval_loss / len(dataloader), predicted_labels, true_labels, f1_macro
 
     def set_test_dataloader(self, X_test, y_test):
         """
@@ -136,7 +188,9 @@ class DeepModelClassifier(BasicClassifier):
         self
             Returns self
         """
-        pass
+        test_dataset = ReviewDataSet(X_test, y_test)
+        self.test_loader = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=False)
+        return self
 
     def prediction_report(self, x, y):
         """
@@ -152,11 +206,25 @@ class DeepModelClassifier(BasicClassifier):
         str
             The classification report
         """
-        pass
+        y_pred = self.predict(x)
+        return classification_report(y, y_pred)
+
 
 # F1 Accuracy : 79%
 if __name__ == '__main__':
     """
     Fit the model with the training data and predict the test data, then print the classification report
     """
-    pass
+
+    loader = ReviewLoader(file_path='path_to_your_file.csv')
+    loader.load_data()
+    loader.get_embeddings()
+
+    x_train, x_test, y_train, y_test = loader.split_data(test_data_ratio=0.2)
+
+    deep_model_classifier = DeepModelClassifier(in_features=100, num_classes=2, batch_size=32, num_epochs=50)
+    deep_model_classifier.set_test_dataloader(x_test, y_test)
+    deep_model_classifier.fit(x_train, y_train)
+
+    print("Classification Report:")
+    print(deep_model_classifier.prediction_report(x_test, y_test))
