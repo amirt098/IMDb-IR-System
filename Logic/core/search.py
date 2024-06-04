@@ -37,6 +37,9 @@ class SearchEngine:
         self.metadata_index = Index_reader(
             path, Indexes.DOCUMENTS, Index_types.METADATA
         )
+        self.document = Index_reader(
+            path, Indexes.DOCUMENTS
+        )
 
     def search(
         self,
@@ -83,19 +86,19 @@ class SearchEngine:
 
         scores = {}
         if method == "unigram":
-            scores = self.find_scores_with_unigram_model(
+            self.find_scores_with_unigram_model(
                 query, smoothing_method, weights, scores, alpha, lamda
             )
         elif safe_ranking:
-            scores = self.find_scores_with_safe_ranking(query, method, weights, scores)
+            self.find_scores_with_safe_ranking(query, method, weights, scores)
         else:
-            scores = self.find_scores_with_unsafe_ranking(
+            self.find_scores_with_unsafe_ranking(
                 query, method, weights, max_results, scores
             )
 
         final_scores = {}
 
-        final_scores = self.aggregate_scores(weights, scores, final_scores)
+        self.aggregate_scores(weights, scores, final_scores)
 
         result = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)
         if max_results is not None:
@@ -121,17 +124,11 @@ class SearchEngine:
         # print("Weights:", weights)
         # print("Scores:", scores)
 
-        for field, field_scores in scores.items():
-            for doc_id, score in field_scores.items():
-                if doc_id not in final_scores:
-                    final_scores[doc_id] = 0
-                if field in weights:
-                    final_scores[doc_id] += weights[field] * score
-                else:
-                    pass
-                    # print(f"Warning: field '{field}' not found in weights.")
-
-        return final_scores
+        for doc_id in set.union(*[set(scores[field].keys()) for field in scores]):
+            final_score = 0
+            for field, weight in weights.items():
+                final_score += weight * scores[field].get(doc_id, 0)
+            final_scores[doc_id] = final_score
 
     def find_scores_with_unsafe_ranking(
         self, query, method, weights, max_results, scores
@@ -153,32 +150,25 @@ class SearchEngine:
             The scores of the documents.
         """
         for field in weights:
-            if weights[field] == 0:
-                continue
             tiered_index = self.tiered_index[field]
-            for tier in ["first_tier", "second_tier", "third_tier"]:
-                if tier not in tiered_index:
-                    continue
-                scorer = Scorer(tiered_index[tier], len(self.metadata_index.index))
-                tier_scores = scorer.compute_scores_with_vector_space_model(query, method)
-                for doc_id, score in tier_scores.items():
-                    if doc_id not in scores:
-                        scores[doc_id] = {}
-                    if field not in scores[doc_id]:
-                        scores[doc_id][field] = 0
-                    scores[doc_id][field] += score * weights[field]
-
-        flattened_scores = []
-        for doc_id, field_scores in scores.items():
-            total_score = sum(field_scores.values())
-            flattened_scores.append((doc_id, total_score))
-
-        flattened_scores.sort(key=lambda x: x[1], reverse=True)
-        top_results = flattened_scores[:max_results]
-
-        top_scores = {doc_id: score for doc_id, score in top_results}
-
-        return top_scores
+            scorer = Scorer(tiered_index, len(tiered_index))
+            if method == "OkapiBM25":
+                doc_lengths = self.document_lengths_index[field].index
+                avg_doc_len = sum(doc_lengths.values()) / len(doc_lengths)
+                for tier in ["first_tier", "second_tier", "third_tier"]:
+                    tier_index = tiered_index[tier]
+                    if len(scores[field]) < max_results:
+                        scores[field].update(
+                            scorer.compute_socres_with_okapi_bm25(query, avg_doc_len, doc_lengths, tier_index))
+                    else:
+                        break
+            else:
+                for tier in ["first_tier", "second_tier", "third_tier"]:
+                    tier_index = tiered_index[tier]
+                    if len(scores[field]) < max_results:
+                        scores[field].update(scorer.compute_scores_with_vector_space_model(query, method, tier_index))
+                    else:
+                        break
 
     def find_scores_with_safe_ranking(self, query, method, weights, scores):
         """
@@ -197,15 +187,14 @@ class SearchEngine:
         """
 
         for field in weights:
-            if weights[field] == 0:
-                continue
-            scorer = Scorer(self.document_indexes[field].index, len(self.metadata_index.index))
-            field_scores = scorer.compute_scores_with_vector_space_model(query, method)
-            for doc_id, score in field_scores.items():
-                if doc_id not in scores:
-                    scores[doc_id] = {}
-                scores[doc_id][field] = score
-        return scores
+            index = self.document_indexes[field].index
+            scorer = Scorer(index, len(index))
+            if method == "OkapiBM25":
+                doc_lengths = self.document_lengths_index[field].index
+                avg_doc_len = sum(doc_lengths.values()) / len(doc_lengths)
+                scores[field] = scorer.compute_socres_with_okapi_bm25(query, avg_doc_len, doc_lengths)
+            else:
+                scores[field] = scorer.compute_scores_with_vector_space_model(query, method)
 
     def find_scores_with_unigram_model(
         self, query, smoothing_method, weights, scores, alpha=0.5, lamda=0.5

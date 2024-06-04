@@ -23,7 +23,10 @@ class DimensionReduction:
         -------
             list: A list of reduced embeddings.
         """
-        pass
+        self.pca.n_components = n_components
+        reduced_emb = self.pca.fit_transform(embeddings)
+
+        return reduced_emb.tolist()
 
     def convert_to_2d_tsne(self, emb_vecs):
         """
@@ -37,7 +40,7 @@ class DimensionReduction:
         --------
             list: A list of 2D vectors.
         """
-        pass
+        return self.tsne_2d.fit_transform(emb_vecs).tolist()
 
     def wandb_plot_2d_tsne(self, data, project_name, run_name):
         """ This function performs t-SNE (t-Distributed Stochastic Neighbor Embedding) dimensionality reduction on the input data and visualizes the resulting 2D embeddings by logging a scatter plot to Weights & Biases (wandb).
@@ -69,16 +72,17 @@ class DimensionReduction:
         run = wandb.init(project=project_name, name=run_name)
 
         # Perform t-SNE dimensionality reduction
-        # TODO
+        tsne_embeddings = self.convert_to_2d_tsne(data)
 
         # Plot the t-SNE embeddings
-        # TODO
+        plt.scatter(tsne_embeddings[:, 0], tsne_embeddings[:, 1])
+        plt.title("t-SNE 2D Embeddings")
 
         # Log the plot to wandb
         wandb.log({"t-SNE 2D Embeddings": wandb.Image(plt)})
 
         # Close the plot display window if needed (optional)
-        # TODO
+        plt.close()
 
     import matplotlib.pyplot as plt
 
@@ -110,10 +114,15 @@ class DimensionReduction:
         """
 
         # Fit PCA and compute cumulative explained variance ratio
-        # TODO
+        self.pca.fit(data)
+        cumulative_variance_ratio = self.pca.explained_variance_ratio_.cumsum()
 
         # Create the plot
-        # TODO
+        plt.figure(figsize=(10, 6))
+        plt.plot(range(1, len(cumulative_variance_ratio) + 1), cumulative_variance_ratio, marker='o')
+        plt.xlabel('Number of Components')
+        plt.ylabel('Cumulative Explained Variance Ratio')
+        plt.title('Explained Variance by Components')
 
         # Initialize wandb
         run = wandb.init(project=project_name, name=run_name)

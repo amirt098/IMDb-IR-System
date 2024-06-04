@@ -1,8 +1,8 @@
 import numpy as np
 
 from typing import List
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import silhouette_score as sk_silhouette_score
+from sklearn.metrics import adjusted_rand_score as sk_adjusted_rand_score
 from sklearn.metrics import confusion_matrix
 
 
@@ -27,7 +27,7 @@ class ClusteringMetrics:
         float
             The average silhouette score, ranging from -1 to 1, where a higher value indicates better clustering.
         """
-        pass
+        return sk_silhouette_score(embeddings, cluster_labels)
 
     def purity_score(self, true_labels: List, cluster_labels: List) -> float:
         """
@@ -45,7 +45,13 @@ class ClusteringMetrics:
         float
             The purity score, ranging from 0 to 1, where a higher value indicates better clustering.
         """
-        pass
+        contingency_matrix = confusion_matrix(true_labels, cluster_labels)
+
+        cluster_sizes = np.sum(contingency_matrix, axis=0)
+        majority_sums = np.amax(contingency_matrix, axis=0)
+        purity_score = np.sum(majority_sums) / np.sum(cluster_sizes)
+
+        return purity_score
 
     def adjusted_rand_score(self, true_labels: List, cluster_labels: List) -> float:
         """
@@ -63,4 +69,5 @@ class ClusteringMetrics:
         float
             The adjusted Rand index, ranging from -1 to 1, where a higher value indicates better clustering.
         """
-        pass
+        return sk_adjusted_rand_score(true_labels, cluster_labels)
+

@@ -68,7 +68,7 @@ class Snippet:
         final_snippet = ""
 
         # TODO: Extract snippet and the tokens which are not present in the doc.
-
+        # print(doc, query)
         filtered_query = self.remove_stop_words_from_query(query)
         doc_tokens = doc.split()
 

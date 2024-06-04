@@ -1,13 +1,15 @@
+import sys
+
 import fasttext
 import re
 import string
-
+sys.path.append("../")
 from tqdm import tqdm
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from scipy.spatial import distance
 
-from .fasttext_data_loader import FastTextDataLoader
+from fasttext_data_loader import FastTextDataLoader
 
 
 def preprocess_text(text, minimum_length=1, stopword_removal=True, stopwords_domain=[], lower_case=True,
@@ -205,7 +207,7 @@ class FastText:
 if __name__ == "__main__":
     ft_model = FastText(method='skipgram')
 
-    path = './Phase_1/index/'
+    path = '../classification/IMDB Dataset.csv'
     ft_data_loader = FastTextDataLoader(path)
 
     X = ft_data_loader.create_train_data()
