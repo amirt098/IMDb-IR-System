@@ -1,0 +1,53 @@
+{
+    "os": "Windows-11-10.0.22631-SP0",
+    "python": "3.12.0",
+    "heartbeatAt": "2024-06-23T21:00:44.158044",
+    "startedAt": "2024-06-23T21:00:40.855254",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:\\Users\\ASUS\\Desktop\\darsi\\bazyabi\\IMDb-IR-System\\Logic\\core\\finetuner\\main.py",
+    "codePathLocal": "main.py",
+    "codePath": "Logic\\core\\finetuner\\main.py",
+    "git": {
+        "remote": "git@github.com:amirt098/IMDb-IR-System.git",
+        "commit": "610a177f2cac98aae4be4354ec11e99973a79957"
+    },
+    "email": "amir0tohidi@gmail.com",
+    "root": "C:/Users/ASUS/Desktop/darsi/bazyabi/IMDb-IR-System",
+    "host": "DESKTOP-M9PS562",
+    "username": "ASUS",
+    "executable": "C:\\Users\\ASUS\\Desktop\\darsi\\bazyabi\\IMDb-IR-System\\.venv\\Scripts\\python.exe",
+    "cpu_count": 24,
+    "cpu_count_logical": 32,
+    "cpu_freq": {
+        "current": 2200.0,
+        "min": 0.0,
+        "max": 2200.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2200.0,
+            "min": 0.0,
+            "max": 2200.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 953.0634727478027,
+            "used": 604.8545112609863
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4070 Laptop GPU",
+            "memory_total": 8585740288
+        }
+    ],
+    "memory": {
+        "total": 15.627609252929688
+    }
+}
